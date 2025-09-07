@@ -1,21 +1,19 @@
 use aiken/crypto.{DataHash}
 
-pub type BpmnEscrowDatum {
-  InitEscrow {
+pub type BpmnEnactDatum {
+  InitState {
     buyer: ByteArray,
     seller: ByteArray,
     workflow: NodeState,
     hashBpmn: DataHash,
     proceed: Int,
-    status: Status,
   }
-  ActiveEscrow {
+  ActiveState {
     buyer: ByteArray,
     seller: ByteArray,
     workflow: NodeState,
     artifactCid: ByteArray,
     hashBpmn: DataHash,
-    status: Status,
     proceed: Int,
   }
 }
@@ -28,15 +26,8 @@ pub type NodeState {
   outgoing: Option<List<DataHash>>,
 }
 
-pub type Status {
-  Start
-  Ongoing
-  Compensated
-  UnCompensated
-}
-
 // could be up to 32 * 3 ?
-pub type EscrowBpmnActions {
+pub type EnactActions {
   Task
   Cancel
   Finalize

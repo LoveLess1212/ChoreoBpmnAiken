@@ -4,23 +4,19 @@ use cardano/address.{VerificationKey}
 use cardano/assets
 use cardano/transaction.{InlineDatum, OutputReference, Transaction, find_input}
 use constant/typev2.{
-  ActiveEscrow, BpmnEscrowDatum, Cancel, Compensated, EscrowBpmnActions,
-  Finalize, InitEscrow, NodeState, Ongoing, Start, Task, UnCompensated,
+  ActiveState, BpmnEnactDatum, Cancel, EnactActions, Finalize, InitState,
+  NodeState, Task,
 }
 use helper/helper.{is_next_task_valid, is_valid_ipfs_cid}
-use vodka_extra_signatories.{all_key_signed, key_signed, one_of_keys_signed}
+use vodka_extra_signatories.{all_key_signed, one_of_keys_signed}
 use vodka_inputs.{inputs_at}
 use vodka_outputs.{outputs_at}
-
-// use vodka_value.{get_all_value_to, value_geq}
-
-// Steps of the BPMN process with A - Provider and B - Consumer (outdated-newest on obsidian)
 
 validator escrow_bpmn {
   // is the input too big?
   spend(
-    _datum: Option<BpmnEscrowDatum>,
-    redeemer: EscrowBpmnActions,
+    _datum: Option<BpmnEnactDatum>,
+    redeemer: EnactActions,
     utxo: OutputReference,
     self: Transaction,
   ) {
@@ -39,68 +35,47 @@ validator escrow_bpmn {
 
         // extract datum input
         expect InlineDatum(raw_input_datum) = input.output.datum
-        expect old_datum: BpmnEscrowDatum = raw_input_datum
-        // Handle both InitEscrow and ActiveEscrow cases
-        let (
-          buyer,
-          seller,
-          old_workflow,
-          hashBpmn,
-          old_artifactCid,
-          old_status,
-          proceed,
-        ) =
+        expect old_datum: BpmnEnactDatum = raw_input_datum
+        // Handle both InitState and ActiveStatecases
+        let (buyer, seller, old_workflow, hashBpmn, old_artifactCid, proceed) =
           when old_datum is {
-            InitEscrow { buyer, seller, workflow, hashBpmn, proceed, status } ->
-              // For InitEscrow, there's no artifactCid, so we use empty ByteArray or handle differently
-              (buyer, seller, workflow, hashBpmn, "", status, proceed)
-            ActiveEscrow {
+            InitState { buyer, seller, workflow, hashBpmn, proceed } ->
+              // For InitState, there's no artifactCid, so we use empty ByteArray or handle differently
+              (buyer, seller, workflow, hashBpmn, "", proceed)
+            ActiveState {
               buyer,
               seller,
               workflow,
               hashBpmn,
               artifactCid,
-              status,
               proceed,
-            } ->
-              (buyer, seller, workflow, hashBpmn, artifactCid, status, proceed)
-          }
-        let in_status_valid = or {
-            old_status == Start,
-            old_status == Ongoing,
+            } -> (buyer, seller, workflow, hashBpmn, artifactCid, proceed)
           }
         // extract datum output
         expect InlineDatum(raw_output_datum) = output.datum
-        expect new_datum: BpmnEscrowDatum = raw_output_datum
-        expect ActiveEscrow {
+        expect new_datum: BpmnEnactDatum = raw_output_datum
+        expect ActiveState {
           workflow: new_workflow,
           artifactCid: new_artifactCid,
-          status: new_status,
           ..
         } = new_datum
-        let expected_status = new_status == Ongoing
 
         // construct expected output datum
         let expected_output_datum =
-          ActiveEscrow {
+          ActiveState {
             buyer,
             seller,
             workflow: new_workflow,
             hashBpmn,
             artifactCid: new_artifactCid,
-            status: new_status,
             proceed,
           }
 
         // validate 
-        let is_status_valid = and {
-            in_status_valid,
-            expected_status,
-          }
         let is_new_task_valid = is_next_task_valid(old_workflow, new_workflow)
         let is_both_parties_signed =
           all_key_signed(extra_signatories, [buyer, seller])
-        // Only validate old_artifactCid if it's not empty (InitEscrow case)
+        // Only validate old_artifactCid if it's not empty (InitState case)
         let is_old_artifact_valid =
           if old_artifactCid == "" {
             True
@@ -108,14 +83,12 @@ validator escrow_bpmn {
             is_valid_ipfs_cid(old_artifactCid)
           }
         // trace @"is_new_task_valid": is_new_task_valid
-        // trace @"is_status_valid": is_status_valid
         // trace @"is_both_parties_signed": is_both_parties_signed
         // trace @"new_datum": new_datum
         // trace @"expected_output_datum": expected_output_datum
         and {
           new_datum == expected_output_datum,
           is_new_task_valid,
-          is_status_valid,
           is_both_parties_signed,
           is_valid_ipfs_cid(new_artifactCid),
           is_old_artifact_valid,
@@ -127,62 +100,35 @@ validator escrow_bpmn {
         expect ([input], []) =
           (inputs_at(inputs, own_address), outputs_at(outputs, own_address))
         expect InlineDatum(raw_input_datum) = input.output.datum
-        expect old_datum: BpmnEscrowDatum = raw_input_datum
+        expect old_datum: BpmnEnactDatum = raw_input_datum
         //trace @"is_seller_signed": extra_signatories
-        when old_datum is {
-          InitEscrow { seller, proceed, .. } -> {
-            // expect Some(pub_key) = address_pub_key(seller)
-            let is_seller_signed = key_signed(extra_signatories, seller)
-            expect Some(payment) =
-              list.find(
-                self.outputs,
-                fn(output) {
-                  output.address.payment_credential == VerificationKey(seller)
-                },
-              )
-
-            let is_seller_refunded =
-              assets.lovelace_of(payment.value) == proceed
-            is_seller_signed && is_seller_refunded
+        let (buyer, seller, proceed) =
+          when old_datum is {
+            InitState { buyer, seller, proceed, .. } -> (buyer, seller, proceed)
+            ActiveState { buyer, seller, proceed, .. } ->
+              (buyer, seller, proceed)
           }
-          ActiveEscrow { buyer, seller, proceed, .. } -> {
-            let is_any_parties_signed =
-              one_of_keys_signed(extra_signatories, [buyer, seller])
-            expect Some(payment_to_seller) =
-              list.find(
-                self.outputs,
-                fn(output) {
-                  output.address.payment_credential == VerificationKey(seller)
-                },
-              )
-            let is_seller_refunded =
-              assets.lovelace_of(payment_to_seller.value) == proceed
+        let is_any_parties_signed =
+          one_of_keys_signed(extra_signatories, [buyer, seller])
+        expect Some(payment_to_seller) =
+          list.find(
+            self.outputs,
+            fn(output) {
+              output.address.payment_credential == VerificationKey(seller)
+            },
+          )
+        let is_seller_refunded =
+          assets.lovelace_of(payment_to_seller.value) == proceed
 
-            is_any_parties_signed && is_seller_refunded
-          }
-        }
+        is_any_parties_signed && is_seller_refunded
       }
       Finalize -> {
-        expect ([input], [output]) =
+        // there should be no output at the contract address
+        expect ([input], []) =
           (inputs_at(inputs, own_address), outputs_at(outputs, own_address))
         expect InlineDatum(raw_input_datum) = input.output.datum
-        expect old_datum: BpmnEscrowDatum = raw_input_datum
-        expect ActiveEscrow {
-          buyer,
-          seller,
-          workflow,
-          proceed,
-          status: old_status,
-          ..
-        } = old_datum
-        let in_status_valid = old_status == Ongoing
-        expect InlineDatum(raw_output_datum) = output.datum
-        expect new_datum: BpmnEscrowDatum = raw_output_datum
-        expect ActiveEscrow { status: new_status, .. } = new_datum
-        let expected_status = or {
-            new_status == Compensated,
-            new_status == UnCompensated,
-          }
+        expect old_datum: BpmnEnactDatum = raw_input_datum
+        expect ActiveState { buyer, seller, workflow, proceed, .. } = old_datum
         let is_both_parties_signed =
           all_key_signed(extra_signatories, [buyer, seller])
         expect Some(payment) =
@@ -194,17 +140,8 @@ validator escrow_bpmn {
             },
           )
         let is_proceed_paid = assets.lovelace_of(payment.value) == proceed
-        let is_status_valid = and {
-            in_status_valid,
-            expected_status,
-          }
-        trace @"is_both_parties_signed": is_both_parties_signed
-        trace @"is_status_valid": is_status_valid
-        trace @"is_proceed_paid": is_proceed_paid
-        trace @"workflow.outgoing": workflow.outgoing
         and {
           is_both_parties_signed,
-          is_status_valid,
           is_proceed_paid,
           workflow.outgoing == None,
         }
