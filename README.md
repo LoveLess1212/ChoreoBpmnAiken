@@ -1,6 +1,6 @@
-# thesis
+# Choreography enactment
 
-Write validators in the `validators` folder, and supporting functions in the `lib` folder using `.ak` as a file extension.
+Write validators and tests in the `validators` folder, and supporting functions in the `lib` folder using `.ak` as a file extension.
 
 ```aiken
 validator my_first_validator {
@@ -59,7 +59,3 @@ Use:
 ```sh
 aiken docs
 ```
-
-## Resources
-
-Find more on the [Aiken's user manual](https://aiken-lang.org).

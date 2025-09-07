@@ -12,7 +12,7 @@ use vodka_extra_signatories.{all_key_signed, one_of_keys_signed}
 use vodka_inputs.{inputs_at}
 use vodka_outputs.{outputs_at}
 
-validator escrow_bpmn {
+validator enact_bpmn {
   // is the input too big?
   spend(
     _datum: Option<BpmnEnactDatum>,

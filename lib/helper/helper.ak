@@ -1,8 +1,8 @@
 use aiken/builtin.{length_of_bytearray}
 use aiken/collection/list
-use cardano/address.{Address, Script, VerificationKey}
+use cardano/address.{Address, VerificationKey}
 use cardano/assets.{Value, merge, zero}
-use cardano/transaction.{Datum, Input, Output, OutputReference}
+use cardano/transaction.{Output}
 use constant/typev2.{NodeState}
 
 pub fn get_all_value_to(outputs: List<Output>, address: ByteArray) -> Value {
@@ -50,48 +50,4 @@ pub fn is_next_task_valid(old_task: NodeState, new_task: NodeState) -> Bool {
     }
 
   is_valid
-}
-
-pub fn input(oref: OutputReference, output: Output) -> Input {
-  let input = Input { output_reference: oref, output }
-
-  input
-}
-
-pub fn oref(id: ByteArray, index: Int) -> OutputReference {
-  let oref = OutputReference { transaction_id: id, output_index: index }
-  oref
-}
-
-pub fn output(addr: Address, value: Value, datum: Datum) -> Output {
-  let output = Output { address: addr, value, datum, reference_script: None }
-
-  output
-}
-
-pub fn scriptAddress(hash: ByteArray) -> Address {
-  let address =
-    Address { payment_credential: Script(hash), stake_credential: None }
-
-  address
-}
-
-pub fn walletAddress(hash: ByteArray) -> Address {
-  let address =
-    Address {
-      payment_credential: VerificationKey(hash),
-      stake_credential: None,
-    }
-
-  address
-}
-
-pub fn makeAsset(
-  policyId: ByteArray,
-  assetName: ByteArray,
-  quantity: Int,
-) -> Value {
-  let asset = assets.from_asset(policyId, assetName, quantity)
-
-  asset
 }

@@ -1,7 +1,7 @@
 {
   "preamble": {
-    "title": "loveless/thesis",
-    "description": "Aiken contracts for project 'loveless/thesis'",
+    "title": "loveless/enact_choreography",
+    "description": "Aiken contracts for project 'loveless/enact_choreography'",
     "version": "1.0.0",
     "plutusVersion": "v3",
     "compiler": {
@@ -12,7 +12,7 @@
   },
   "validators": [
     {
-      "title": "validatorv2.escrow_bpmn.spend",
+      "title": "validatorv2.enact_bpmn.spend",
       "datum": {
         "title": "_datum",
         "schema": {
@@ -29,7 +29,7 @@
       "hash": "d32dea1f4b6908d922af8b40fc834ae4d61312dc191a6004a8973f65"
     },
     {
-      "title": "validatorv2.escrow_bpmn.else",
+      "title": "validatorv2.enact_bpmn.else",
       "redeemer": {
         "schema": {}
       },
@@ -79,9 +79,11 @@
     },
     "constant/typev2/BpmnEnactDatum": {
       "title": "BpmnEnactDatum",
+      "description": "Datum type for the BPMN enactment smart contract",
       "anyOf": [
         {
           "title": "InitState",
+          "description": "Initial state of the contract start event",
           "dataType": "constructor",
           "index": 0,
           "fields": [
@@ -109,6 +111,7 @@
         },
         {
           "title": "ActiveState",
+          "description": "Active state of the contract task events",
           "dataType": "constructor",
           "index": 1,
           "fields": [
@@ -142,21 +145,25 @@
     },
     "constant/typev2/EnactActions": {
       "title": "EnactActions",
+      "description": "Redeemer type for actions that can be performed on the BPMN enactment smart contract",
       "anyOf": [
         {
           "title": "Task",
+          "description": "Move to the next task in the workflow",
           "dataType": "constructor",
           "index": 0,
           "fields": []
         },
         {
           "title": "Cancel",
+          "description": "Cancel the workflow -> uncompensated ending",
           "dataType": "constructor",
           "index": 1,
           "fields": []
         },
         {
           "title": "Finalize",
+          "description": "Finalize the workflow -> compensated ending",
           "dataType": "constructor",
           "index": 2,
           "fields": []
@@ -165,6 +172,7 @@
     },
     "constant/typev2/NodeState": {
       "title": "NodeState",
+      "description": "Current state of a task in the BPMN workflow",
       "anyOf": [
         {
           "title": "NodeState",
@@ -173,14 +181,17 @@
           "fields": [
             {
               "title": "current",
+              "description": "hash of the current task",
               "$ref": "#/definitions/aiken~1crypto~1DataHash"
             },
             {
               "title": "incoming",
+              "description": "list of hashes of possible next tasks",
               "$ref": "#/definitions/Option$List$aiken~1crypto~1DataHash"
             },
             {
               "title": "outgoing",
+              "description": "list of hashes of possible previous tasks",
               "$ref": "#/definitions/Option$List$aiken~1crypto~1DataHash"
             }
           ]

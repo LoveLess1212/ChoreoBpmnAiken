@@ -26,7 +26,7 @@ test test_is_next_task_valid(n: Int via fuzz.int_between(0, 100)) {
   is_next_task_valid(old_task, new_task)
 }
 
-test escrow_bpmn_task1() {
+test enact_bpmn_task1() {
   let seller = #"beef"
   let buyer = #"face"
   let datumIn = get_datumout_Start()
@@ -46,7 +46,7 @@ test escrow_bpmn_task1() {
       |> required_signer_hash(True, buyer)
       |> required_signer_hash(True, seller)
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Task,
     mock_utxo_ref(0, 1),
@@ -54,7 +54,7 @@ test escrow_bpmn_task1() {
   )
 }
 
-test escrow_bpmn_task2() {
+test enact_bpmn_task2() {
   let seller = #"beef"
   let buyer = #"face"
   let datumIn = get_datumOutRun1()
@@ -74,7 +74,7 @@ test escrow_bpmn_task2() {
       |> required_signer_hash(True, buyer)
       |> required_signer_hash(True, seller)
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Task,
     mock_utxo_ref(0, 1),
@@ -82,7 +82,7 @@ test escrow_bpmn_task2() {
   )
 }
 
-test escrow_bpmn_finalize() {
+test enact_bpmn_finalize() {
   let seller = #"beef"
   let buyer = #"face"
   let datumIn = get_datumOutRun2()
@@ -100,7 +100,7 @@ test escrow_bpmn_finalize() {
       |> required_signer_hash(True, buyer)
       |> required_signer_hash(True, seller)
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Finalize,
     mock_utxo_ref(0, 1),
@@ -144,7 +144,7 @@ fn get_cancel_tx(test_case: TestCaseCancel) -> Transaction {
     |> complete()
 }
 
-test escrow_bpmn_cancel_init() {
+test enact_bpmn_cancel_init() {
   let test_case =
     TestCaseCancel {
       is_buyer_signed: False,
@@ -154,7 +154,7 @@ test escrow_bpmn_cancel_init() {
       is_buyer_refunded: False,
     }
   let mock_tx = get_cancel_tx(test_case)
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(get_datumIn_Start()),
     Cancel,
     mock_utxo_ref(0, 1),
@@ -162,7 +162,7 @@ test escrow_bpmn_cancel_init() {
   )
 }
 
-test escrow_bpmn_cancel_active() {
+test enact_bpmn_cancel_active() {
   let test_case =
     TestCaseCancel {
       is_buyer_signed: False,
@@ -172,7 +172,7 @@ test escrow_bpmn_cancel_active() {
       is_buyer_refunded: True,
     }
   let mock_tx = get_cancel_tx(test_case)
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(get_datumout_Start()),
     Cancel,
     mock_utxo_ref(0, 1),

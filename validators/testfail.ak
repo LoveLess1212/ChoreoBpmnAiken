@@ -16,7 +16,7 @@ use validatorv2
 
 // FAILURE TEST CASES - These tests are expected to fail
 
-test escrow_bpmn_task_missing_buyer_signature() fail {
+test enact_bpmn_task_missing_buyer_signature() fail {
   // This should fail because buyer signature is missing
   let seller = #"beef"
   let datumIn = get_datumout_Start()
@@ -36,7 +36,7 @@ test escrow_bpmn_task_missing_buyer_signature() fail {
       // Missing buyer signature - only seller signs
       |> required_signer_hash(True, seller)
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Task,
     mock_utxo_ref(0, 1),
@@ -44,7 +44,7 @@ test escrow_bpmn_task_missing_buyer_signature() fail {
   )
 }
 
-test escrow_bpmn_task_missing_seller_signature() fail {
+test enact_bpmn_task_missing_seller_signature() fail {
   // This should fail because seller signature is missing
   let buyer = #"face"
   let datumIn = get_datumout_Start()
@@ -64,7 +64,7 @@ test escrow_bpmn_task_missing_seller_signature() fail {
       // Missing seller signature - only buyer signs
       |> required_signer_hash(True, buyer)
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Task,
     mock_utxo_ref(0, 1),
@@ -72,7 +72,7 @@ test escrow_bpmn_task_missing_seller_signature() fail {
   )
 }
 
-test escrow_bpmn_task_missing_both_signatures() fail {
+test enact_bpmn_task_missing_both_signatures() fail {
   // This should fail because both buyer and seller signatures are missing
   let datumIn = get_datumout_Start()
   let datumOut = get_datumOutRun1()
@@ -90,7 +90,7 @@ test escrow_bpmn_task_missing_both_signatures() fail {
       |> tx_out_inline_datum(True, datumOut)
       // No signatures at all
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Task,
     mock_utxo_ref(0, 1),
@@ -98,7 +98,7 @@ test escrow_bpmn_task_missing_both_signatures() fail {
   )
 }
 
-test escrow_bpmn_task_invalid_workflow_transition() fail {
+test enact_bpmn_task_invalid_workflow_transition() fail {
   // This should fail because of invalid workflow transition (skipping steps)
   let seller = #"beef"
   let buyer = #"face"
@@ -122,7 +122,7 @@ test escrow_bpmn_task_invalid_workflow_transition() fail {
       |> required_signer_hash(True, buyer)
       |> required_signer_hash(True, seller)
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Task,
     mock_utxo_ref(0, 1),
@@ -143,7 +143,7 @@ fn get_datum_with_invalid_cid() -> BpmnEnactDatum {
   }
 }
 
-test escrow_bpmn_task_invalid_artifact_cid() fail {
+test enact_bpmn_task_invalid_artifact_cid() fail {
   // This should fail because of invalid/empty artifact CID
   let seller = #"beef"
   let buyer = #"face"
@@ -164,7 +164,7 @@ test escrow_bpmn_task_invalid_artifact_cid() fail {
       |> required_signer_hash(True, buyer)
       |> required_signer_hash(True, seller)
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Task,
     mock_utxo_ref(0, 1),
@@ -185,7 +185,7 @@ fn get_datum_with_wrong_buyer() -> BpmnEnactDatum {
   }
 }
 
-test escrow_bpmn_task_datum_modification() fail {
+test enact_bpmn_task_datum_modification() fail {
   // This should fail because output datum has different buyer than input
   let seller = #"beef"
   let buyer = #"face"
@@ -206,7 +206,7 @@ test escrow_bpmn_task_datum_modification() fail {
       |> required_signer_hash(True, buyer)
       |> required_signer_hash(True, seller)
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Task,
     mock_utxo_ref(0, 1),
@@ -214,7 +214,7 @@ test escrow_bpmn_task_datum_modification() fail {
   )
 }
 
-test escrow_bpmn_finalize_missing_buyer_signature() fail {
+test enact_bpmn_finalize_missing_buyer_signature() fail {
   // This should fail because buyer signature is missing for finalize
   let seller = #"beef"
   let datumIn = get_datumOutRun2()
@@ -232,7 +232,7 @@ test escrow_bpmn_finalize_missing_buyer_signature() fail {
       // Missing buyer signature - only seller signs
       |> required_signer_hash(True, seller)
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Finalize,
     mock_utxo_ref(0, 1),
@@ -240,7 +240,7 @@ test escrow_bpmn_finalize_missing_buyer_signature() fail {
   )
 }
 
-test escrow_bpmn_finalize_missing_seller_signature() fail {
+test enact_bpmn_finalize_missing_seller_signature() fail {
   // This should fail because seller signature is missing for finalize
   let buyer = #"face"
   let datumIn = get_datumOutRun2()
@@ -258,7 +258,7 @@ test escrow_bpmn_finalize_missing_seller_signature() fail {
       // Missing seller signature - only buyer signs
       |> required_signer_hash(True, buyer)
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Finalize,
     mock_utxo_ref(0, 1),
@@ -266,7 +266,7 @@ test escrow_bpmn_finalize_missing_seller_signature() fail {
   )
 }
 
-test escrow_bpmn_finalize_workflow_not_complete() fail {
+test enact_bpmn_finalize_workflow_not_complete() fail {
   // This should fail because workflow is not at the end (outgoing is not None)
   let seller = #"beef"
   let buyer = #"face"
@@ -287,7 +287,7 @@ test escrow_bpmn_finalize_workflow_not_complete() fail {
       |> required_signer_hash(True, buyer)
       |> required_signer_hash(True, seller)
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Finalize,
     mock_utxo_ref(0, 1),
@@ -295,7 +295,7 @@ test escrow_bpmn_finalize_workflow_not_complete() fail {
   )
 }
 
-test escrow_bpmn_cancel_no_signatures() fail {
+test enact_bpmn_cancel_no_signatures() fail {
   // This should fail because neither buyer nor seller signed the cancel transaction
   let datumIn = get_datumOutRun2()
   let mock_tx =
@@ -311,7 +311,7 @@ test escrow_bpmn_cancel_no_signatures() fail {
       |> tx_out(True, get_seller_address(), from_lovelace(2000000))
       // No signatures at all
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Cancel,
     mock_utxo_ref(0, 1),
@@ -319,7 +319,7 @@ test escrow_bpmn_cancel_no_signatures() fail {
   )
 }
 
-test escrow_bpmn_cancel_wrong_refund_amount() fail {
+test enact_bpmn_cancel_wrong_refund_amount() fail {
   // This should fail because refund amount is incorrect
   let buyer = #"face"
   let datumIn = get_datumOutRun2()
@@ -337,7 +337,7 @@ test escrow_bpmn_cancel_wrong_refund_amount() fail {
       |> tx_out(True, get_seller_address(), from_lovelace(1000000))
       |> required_signer_hash(True, buyer)
       |> complete()
-  validatorv2.escrow_bpmn.spend(
+  validatorv2.enact_bpmn.spend(
     Some(datumIn),
     Cancel,
     mock_utxo_ref(0, 1),

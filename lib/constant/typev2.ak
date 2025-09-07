@@ -1,6 +1,8 @@
 use aiken/crypto.{DataHash}
 
+/// Datum type for the BPMN enactment smart contract
 pub type BpmnEnactDatum {
+  /// Initial state of the contract start event
   InitState {
     buyer: ByteArray,
     seller: ByteArray,
@@ -8,6 +10,7 @@ pub type BpmnEnactDatum {
     hashBpmn: DataHash,
     proceed: Int,
   }
+  /// Active state of the contract task events
   ActiveState {
     buyer: ByteArray,
     seller: ByteArray,
@@ -18,17 +21,22 @@ pub type BpmnEnactDatum {
   }
 }
 
+/// Current state of a task in the BPMN workflow
 pub type NodeState {
+  /// hash of the current task
   current: DataHash,
-  // 32 bytes
+  /// list of hashes of possible next tasks
   incoming: Option<List<DataHash>>,
-  // 32 bytes
+  /// list of hashes of possible previous tasks
   outgoing: Option<List<DataHash>>,
 }
 
-// could be up to 32 * 3 ?
+/// Redeemer type for actions that can be performed on the BPMN enactment smart contract
 pub type EnactActions {
+  /// Move to the next task in the workflow
   Task
+  /// Cancel the workflow -> uncompensated ending
   Cancel
+  /// Finalize the workflow -> compensated ending
   Finalize
 }
