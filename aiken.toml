@@ -1,6 +1,6 @@
 name = "loveless/thesis"
-version = "0.0.0"
-compiler = "v1.1.4"
+version = "1.0.0"
+compiler = "v1.1.17"
 plutus = "v3"
 license = "Apache-2.0"
 description = "Aiken contracts for project 'loveless/thesis'"
@@ -18,6 +18,11 @@ source = "github"
 [[dependencies]]
 name = "sidan-lab/vodka"
 version = "0.1.1-beta"
+source = "github"
+
+[[dependencies]]
+name = "aiken-lang/fuzz"
+version = "v2"
 source = "github"
 
 [config]

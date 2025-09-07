@@ -1,10 +1,14 @@
+use aiken/builtin.{mod_integer}
+use aiken/fuzz
+use aiken/primitive/bytearray
 use cardano/address.{Address, VerificationKey}
 use cardano/assets.{from_lovelace}
 use cardano/transaction.{Transaction}
 use constant/typev2.{
-  ActiveEscrow, BpmnEscrowDatum, Cancel, Finalize, InitEscrow, NodeState, Start,
-  Task,
+  ActiveEscrow, BpmnEscrowDatum, Cancel, Finalize, InitEscrow, NodeState,
+  Ongoing, Start, Task,
 }
+use helper/helper.{is_next_task_valid, is_valid_ipfs_cid}
 // use helper/helper as t
 use mocktail.{
   complete, mocktail_tx, required_signer_hash, tx_in, tx_in_inline_datum, tx_out,
@@ -33,17 +37,56 @@ fn get_seller_address() -> Address {
   address
 }
 
+fn generate_artifact_cid(seed: Int) -> ByteArray {
+  // Generate a mock IPFS CID based on a seed
+  // Format: "Qm" prefix + 44 character base58-like string (represented as hex)
+  let base_cid =
+    #"516d546573744369643132333435363738393061626364656631323334353637383930616263646566"
+  // Append seed as hex to make it unique
+  let seed_hex =
+    if seed == 0 {
+      #"30"
+    } else if seed == 1 {
+      #"31"
+    } else if seed == 2 {
+      #"32"
+    } else if seed == 3 {
+      #"33"
+    } else {
+      #"39"
+    }
+  bytearray.concat(base_cid, seed_hex)
+}
+
+fn get_nth_workflow(n: Int, end: Bool) -> NodeState {
+  NodeState {
+    current: mock_key_hash(n),
+    incoming: if n == 0 {
+      None
+    } else if mod_integer(n, 2) == 0 {
+      Some([mock_key_hash(n - 2), mock_key_hash(n - 1)])
+    } else {
+      Some([mock_key_hash(n - 1)])
+    },
+    outgoing: if end {
+      None
+    } else if mod_integer(n, 2) == 0 {
+      Some([mock_key_hash(n + 1), mock_key_hash(n + 2)])
+    } else {
+      Some([mock_key_hash(n + 1)])
+    },
+  }
+}
+
 fn get_datumIn_Start() -> BpmnEscrowDatum {
   let a =
     InitEscrow {
       seller: #"beef",
-      price: 200,
-      workflow: NodeState {
-        current: mock_key_hash(0),
-        incoming: None,
-        outgoing: Some([mock_key_hash(1), mock_key_hash(2)]),
-      },
+      buyer: #"face",
+      workflow: get_nth_workflow(0, False),
       hashBpmn: mock_key_hash(0),
+      proceed: 2000000,
+      status: Start,
     }
   a
 }
@@ -53,13 +96,11 @@ fn get_datumout_Start() -> BpmnEscrowDatum {
     ActiveEscrow {
       seller: #"beef",
       buyer: #"face",
-      price: 200,
-      workflow: NodeState {
-        current: mock_key_hash(0),
-        incoming: None,
-        outgoing: Some([mock_key_hash(1), mock_key_hash(2)]),
-      },
+      workflow: get_nth_workflow(1, False),
+      artifactCid: generate_artifact_cid(0),
       hashBpmn: mock_key_hash(0),
+      status: Start,
+      proceed: 2000000,
     }
   a
 }
@@ -71,13 +112,11 @@ fn get_datumOutRun1() -> BpmnEscrowDatum {
     ActiveEscrow {
       buyer: #"face",
       seller: #"beef",
-      price: 200,
-      workflow: NodeState {
-        current: mock_key_hash(1),
-        incoming: Some(mock_key_hash(0)),
-        outgoing: Some([mock_key_hash(3)]),
-      },
+      workflow: get_nth_workflow(2, False),
+      artifactCid: generate_artifact_cid(1),
       hashBpmn: mock_key_hash(0),
+      status: Ongoing,
+      proceed: 2000000,
     }
   a
 }
@@ -87,50 +126,38 @@ fn get_datumOutRun2() -> BpmnEscrowDatum {
     ActiveEscrow {
       buyer: #"face",
       seller: #"beef",
-      price: 200,
-      workflow: NodeState {
-        current: mock_key_hash(3),
-        incoming: Some(mock_key_hash(1)),
-        outgoing: None,
-      },
+      workflow: get_nth_workflow(3, True),
+      artifactCid: generate_artifact_cid(2),
       hashBpmn: mock_key_hash(0),
+      status: Ongoing,
+      proceed: 2000000,
     }
   a
 }
 
-test escrow_bpmn_start() {
-  let buyer = #"face"
-  //   let output_reference = tx_in(0, 1)
-  let datumIn = get_datumIn_Start()
-  let datumOut = get_datumout_Start()
-  let mock_tx =
-    mocktail_tx()
-      |> tx_in(
-          True,
-          mock_tx_hash(0),
-          1,
-          from_lovelace(0),
-          mock_script_address(1, None),
-        )
-      |> tx_in_inline_datum(True, datumIn)
-      |> tx_out(True, mock_script_address(1, None), from_lovelace(0))
-      |> tx_out_inline_datum(True, datumOut)
-      |> required_signer_hash(True, buyer)
-      |> complete()
-  validatorv2.escrow_bpmn.spend(
-    Some(datumIn),
-    Start(buyer),
-    mock_tx,
-    mock_utxo_ref(0, 1),
-  )
+fn get_datumOutRun3() -> BpmnEscrowDatum {
+  let a =
+    ActiveEscrow {
+      buyer: #"face",
+      seller: #"beef",
+      workflow: get_nth_workflow(3, True),
+      artifactCid: generate_artifact_cid(2),
+      hashBpmn: mock_key_hash(0),
+      status: Ongoing,
+      proceed: 2000000,
+    }
+  a
 }
 
-fn sampleTaskIn1() -> NodeState {
-  NodeState {
-    current: mock_key_hash(1),
-    incoming: Some(mock_key_hash(0)),
-    outgoing: Some([mock_key_hash(3)]),
-  }
+test is_valid_mock_cid() {
+  let cid = generate_artifact_cid(0)
+  is_valid_ipfs_cid(cid)
+}
+
+test test_is_next_task_valid(n: Int via fuzz.int()) {
+  let old_task = get_nth_workflow(n, False)
+  let new_task = get_nth_workflow(n + 1, False)
+  is_next_task_valid(old_task, new_task)
 }
 
 test escrow_bpmn_task1() {
@@ -138,7 +165,6 @@ test escrow_bpmn_task1() {
   let buyer = #"face"
   let datumIn = get_datumout_Start()
   let datumOut = get_datumOutRun1()
-  let taskIn = sampleTaskIn1()
   let mock_tx =
     mocktail_tx()
       |> tx_in(
@@ -149,16 +175,16 @@ test escrow_bpmn_task1() {
           mock_script_address(1, None),
         )
       |> tx_in_inline_datum(True, datumIn)
-      |> tx_out(True, mock_script_address(1, None), from_lovelace(0))
+      |> tx_out(True, mock_script_address(1, None), from_lovelace(9000000))
       |> tx_out_inline_datum(True, datumOut)
       |> required_signer_hash(True, buyer)
       |> required_signer_hash(True, seller)
       |> complete()
   validatorv2.escrow_bpmn.spend(
     Some(datumIn),
-    Task(taskIn),
-    mock_tx,
+    Task,
     mock_utxo_ref(0, 1),
+    mock_tx,
   )
 }
 
@@ -167,12 +193,6 @@ test escrow_bpmn_task2() {
   let buyer = #"face"
   let datumIn = get_datumOutRun1()
   let datumOut = get_datumOutRun2()
-  let taskIn =
-    NodeState {
-      current: mock_key_hash(3),
-      incoming: Some(mock_key_hash(1)),
-      outgoing: None,
-    }
   let mock_tx =
     mocktail_tx()
       |> tx_in(
@@ -183,16 +203,16 @@ test escrow_bpmn_task2() {
           mock_script_address(1, None),
         )
       |> tx_in_inline_datum(True, datumIn)
-      |> tx_out(True, mock_script_address(1, None), from_lovelace(0))
+      |> tx_out(True, mock_script_address(1, None), from_lovelace(11000000))
       |> tx_out_inline_datum(True, datumOut)
       |> required_signer_hash(True, buyer)
       |> required_signer_hash(True, seller)
       |> complete()
   validatorv2.escrow_bpmn.spend(
     Some(datumIn),
-    Task(taskIn),
-    mock_tx,
+    Task,
     mock_utxo_ref(0, 1),
+    mock_tx,
   )
 }
 
@@ -206,19 +226,19 @@ test escrow_bpmn_finalize() {
           True,
           mock_tx_hash(0),
           1,
-          from_lovelace(200),
+          from_lovelace(11000000),
           mock_script_address(1, None),
         )
       |> tx_in_inline_datum(True, datumIn)
-      |> tx_out(True, get_seller_address(), from_lovelace(200))
+      |> tx_out(True, get_seller_address(), from_lovelace(11000000))
       |> required_signer_hash(True, buyer)
       |> required_signer_hash(True, seller)
       |> complete()
   validatorv2.escrow_bpmn.spend(
     Some(datumIn),
     Finalize,
-    mock_tx,
     mock_utxo_ref(0, 1),
+    mock_tx,
   )
 }
 
@@ -247,12 +267,14 @@ fn get_cancel_tx(test_case: TestCaseCancel) -> Transaction {
         True,
         mock_tx_hash(0),
         1,
-        from_lovelace(200),
+        from_lovelace(11000000),
         mock_script_address(1, None),
       )
     |> tx_in_inline_datum(is_initDatum, get_datumIn_Start())
-    |> tx_in_inline_datum(is_activeDatum, get_datumout_Start())
-    |> tx_out(is_buyer_refunded, get_buyer_address(), from_lovelace(200))
+    |> tx_in_inline_datum(is_activeDatum, get_datumOutRun2())
+    |> tx_out(is_buyer_refunded, get_buyer_address(), from_lovelace(5000000))
+    |> tx_out(True, get_seller_address(), from_lovelace(6000000))
+    |> tx_out(is_initDatum, get_seller_address(), from_lovelace(2000000))
     |> complete()
 }
 
@@ -265,18 +287,20 @@ test escrow_bpmn_cancel() {
           True,
           mock_tx_hash(0),
           1,
-          from_lovelace(200),
+          from_lovelace(11000000),
           mock_script_address(1, None),
         )
       |> tx_in_inline_datum(True, datumIn)
-      |> tx_out(True, get_buyer_address(), from_lovelace(200))
-      |> required_signer_hash(True, buyer) // |> required_signer_hash(True, seller)
+      |> tx_out(True, get_buyer_address(), from_lovelace(5000000))
+      |> tx_out(True, get_seller_address(), from_lovelace(6000000))
+      |> required_signer_hash(True, buyer)
+      // |> required_signer_hash(True, seller)
       |> complete()
   validatorv2.escrow_bpmn.spend(
     Some(datumIn),
     Cancel,
-    mock_tx,
     mock_utxo_ref(0, 1),
+    mock_tx,
   )
 }
 
@@ -293,8 +317,8 @@ test escrow_bpmn_cancel_init() {
   validatorv2.escrow_bpmn.spend(
     Some(get_datumIn_Start()),
     Cancel,
-    mock_tx,
     mock_utxo_ref(0, 1),
+    mock_tx,
   )
 }
 
@@ -311,7 +335,7 @@ test escrow_bpmn_cancel_active() {
   validatorv2.escrow_bpmn.spend(
     Some(get_datumout_Start()),
     Cancel,
-    mock_tx,
     mock_utxo_ref(0, 1),
+    mock_tx,
   )
 }
