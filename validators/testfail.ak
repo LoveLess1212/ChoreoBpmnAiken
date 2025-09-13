@@ -1,5 +1,7 @@
 use cardano/assets.{from_lovelace}
-use constant/typev2.{ActiveState, BpmnEnactDatum, Cancel, Finalize, Task}
+use constant/typev2.{
+  ActiveState, BpmnEnactDatum, Compensated, Task, Uncompensated,
+}
 use helper/test_helper.{
   generate_artifact_cid, get_datumOutRun1, get_datumOutRun2, get_datumout_Start,
   get_nth_workflow, get_seller_address,
@@ -234,7 +236,7 @@ test enact_bpmn_finalize_missing_buyer_signature() fail {
       |> complete()
   validatorv2.enact_bpmn.spend(
     Some(datumIn),
-    Finalize,
+    Uncompensated,
     mock_utxo_ref(0, 1),
     mock_tx,
   )
@@ -260,7 +262,7 @@ test enact_bpmn_finalize_missing_seller_signature() fail {
       |> complete()
   validatorv2.enact_bpmn.spend(
     Some(datumIn),
-    Finalize,
+    Uncompensated,
     mock_utxo_ref(0, 1),
     mock_tx,
   )
@@ -289,7 +291,7 @@ test enact_bpmn_finalize_workflow_not_complete() fail {
       |> complete()
   validatorv2.enact_bpmn.spend(
     Some(datumIn),
-    Finalize,
+    Uncompensated,
     mock_utxo_ref(0, 1),
     mock_tx,
   )
@@ -313,7 +315,59 @@ test enact_bpmn_cancel_no_signatures() fail {
       |> complete()
   validatorv2.enact_bpmn.spend(
     Some(datumIn),
-    Cancel,
+    Compensated,
+    mock_utxo_ref(0, 1),
+    mock_tx,
+  )
+}
+
+test enact_bpmn_cancel_only_buyer_signature() fail {
+  // This should fail because only buyer signed but seller signature is required too
+  let buyer = #"face"
+  let datumIn = get_datumOutRun2()
+  let mock_tx =
+    mocktail_tx()
+      |> tx_in(
+          True,
+          mock_tx_hash(0),
+          1,
+          from_lovelace(2000000),
+          mock_script_address(1, None),
+        )
+      |> tx_in_inline_datum(True, datumIn)
+      |> tx_out(True, get_seller_address(), from_lovelace(2000000))
+      // Only buyer signature, missing seller signature
+      |> required_signer_hash(True, buyer)
+      |> complete()
+  validatorv2.enact_bpmn.spend(
+    Some(datumIn),
+    Compensated,
+    mock_utxo_ref(0, 1),
+    mock_tx,
+  )
+}
+
+test enact_bpmn_cancel_only_seller_signature() fail {
+  // This should fail because only seller signed but buyer signature is required too
+  let seller = #"beef"
+  let datumIn = get_datumOutRun2()
+  let mock_tx =
+    mocktail_tx()
+      |> tx_in(
+          True,
+          mock_tx_hash(0),
+          1,
+          from_lovelace(2000000),
+          mock_script_address(1, None),
+        )
+      |> tx_in_inline_datum(True, datumIn)
+      |> tx_out(True, get_seller_address(), from_lovelace(2000000))
+      // Only seller signature, missing buyer signature  
+      |> required_signer_hash(True, seller)
+      |> complete()
+  validatorv2.enact_bpmn.spend(
+    Some(datumIn),
+    Compensated,
     mock_utxo_ref(0, 1),
     mock_tx,
   )
@@ -322,6 +376,7 @@ test enact_bpmn_cancel_no_signatures() fail {
 test enact_bpmn_cancel_wrong_refund_amount() fail {
   // This should fail because refund amount is incorrect
   let buyer = #"face"
+  let seller = #"beef"
   let datumIn = get_datumOutRun2()
   let mock_tx =
     mocktail_tx()
@@ -336,10 +391,11 @@ test enact_bpmn_cancel_wrong_refund_amount() fail {
       // Wrong refund amount - should be 2000000 but giving 1000000
       |> tx_out(True, get_seller_address(), from_lovelace(1000000))
       |> required_signer_hash(True, buyer)
+      |> required_signer_hash(True, seller)
       |> complete()
   validatorv2.enact_bpmn.spend(
     Some(datumIn),
-    Cancel,
+    Compensated,
     mock_utxo_ref(0, 1),
     mock_tx,
   )

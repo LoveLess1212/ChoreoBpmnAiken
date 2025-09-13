@@ -35,8 +35,8 @@ pub type NodeState {
 pub type EnactActions {
   /// Move to the next task in the workflow
   Task
-  /// Cancel the workflow -> uncompensated ending
-  Cancel
-  /// Finalize the workflow -> compensated ending
-  Finalize
+  /// Compensated the workflow -> uncompensated ending
+  Compensated
+  /// Uncompensated the workflow -> compensated ending
+  Uncompensated
 }

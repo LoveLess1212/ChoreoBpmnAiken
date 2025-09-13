@@ -4,8 +4,8 @@ use cardano/address.{VerificationKey}
 use cardano/assets
 use cardano/transaction.{InlineDatum, OutputReference, Transaction, find_input}
 use constant/typev2.{
-  ActiveState, BpmnEnactDatum, Cancel, EnactActions, Finalize, InitState,
-  NodeState, Task,
+  ActiveState, BpmnEnactDatum, Compensated, EnactActions, InitState, NodeState,
+  Task, Uncompensated,
 }
 use helper/helper.{is_next_task_valid, is_valid_ipfs_cid}
 use vodka_extra_signatories.{all_key_signed, one_of_keys_signed}
@@ -95,8 +95,9 @@ validator enact_bpmn {
         }
       }
 
-      Cancel -> {
-        //trace @"Cancel"
+      Compensated -> {
+        // could compensated at any time, no output generated, but both parties must sign, and seller must be refunded
+        // could be update the logic in the future to specify which parties should sign
         expect ([input], []) =
           (inputs_at(inputs, own_address), outputs_at(outputs, own_address))
         expect InlineDatum(raw_input_datum) = input.output.datum
@@ -108,8 +109,8 @@ validator enact_bpmn {
             ActiveState { buyer, seller, proceed, .. } ->
               (buyer, seller, proceed)
           }
-        let is_any_parties_signed =
-          one_of_keys_signed(extra_signatories, [buyer, seller])
+        let is_both_parties_signed =
+          all_key_signed(extra_signatories, [buyer, seller])
         expect Some(payment_to_seller) =
           list.find(
             self.outputs,
@@ -120,9 +121,9 @@ validator enact_bpmn {
         let is_seller_refunded =
           assets.lovelace_of(payment_to_seller.value) == proceed
 
-        is_any_parties_signed && is_seller_refunded
+        is_both_parties_signed && is_seller_refunded
       }
-      Finalize -> {
+      Uncompensated -> {
         // there should be no output at the contract address
         expect ([input], []) =
           (inputs_at(inputs, own_address), outputs_at(outputs, own_address))

@@ -1,7 +1,7 @@
 use aiken/fuzz
 use cardano/assets.{from_lovelace}
 use cardano/transaction.{Transaction}
-use constant/typev2.{Cancel, Finalize, Task}
+use constant/typev2.{Compensated, Task, Uncompensated}
 use helper/helper.{is_next_task_valid, is_valid_ipfs_cid}
 use helper/test_helper.{
   generate_artifact_cid, get_buyer_address, get_datumIn_Start, get_datumOutRun1,
@@ -102,7 +102,7 @@ test enact_bpmn_finalize() {
       |> complete()
   validatorv2.enact_bpmn.spend(
     Some(datumIn),
-    Finalize,
+    Uncompensated,
     mock_utxo_ref(0, 1),
     mock_tx,
   )
@@ -147,7 +147,7 @@ fn get_cancel_tx(test_case: TestCaseCancel) -> Transaction {
 test enact_bpmn_cancel_init() {
   let test_case =
     TestCaseCancel {
-      is_buyer_signed: False,
+      is_buyer_signed: True,
       is_seller_signed: True,
       is_initDatum: True,
       is_activeDatum: False,
@@ -156,7 +156,7 @@ test enact_bpmn_cancel_init() {
   let mock_tx = get_cancel_tx(test_case)
   validatorv2.enact_bpmn.spend(
     Some(get_datumIn_Start()),
-    Cancel,
+    Compensated,
     mock_utxo_ref(0, 1),
     mock_tx,
   )
@@ -165,7 +165,7 @@ test enact_bpmn_cancel_init() {
 test enact_bpmn_cancel_active() {
   let test_case =
     TestCaseCancel {
-      is_buyer_signed: False,
+      is_buyer_signed: True,
       is_seller_signed: True,
       is_initDatum: False,
       is_activeDatum: True,
@@ -174,7 +174,7 @@ test enact_bpmn_cancel_active() {
   let mock_tx = get_cancel_tx(test_case)
   validatorv2.enact_bpmn.spend(
     Some(get_datumout_Start()),
-    Cancel,
+    Compensated,
     mock_utxo_ref(0, 1),
     mock_tx,
   )
