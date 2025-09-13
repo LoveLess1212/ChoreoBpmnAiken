@@ -8,12 +8,11 @@ use constant/typev2.{
   Task, Uncompensated,
 }
 use helper/helper.{is_next_task_valid, is_valid_ipfs_cid}
-use vodka_extra_signatories.{all_key_signed, one_of_keys_signed}
+use vodka_extra_signatories.{all_key_signed}
 use vodka_inputs.{inputs_at}
 use vodka_outputs.{outputs_at}
 
 validator enact_bpmn {
-  // is the input too big?
   spend(
     _datum: Option<BpmnEnactDatum>,
     redeemer: EnactActions,
