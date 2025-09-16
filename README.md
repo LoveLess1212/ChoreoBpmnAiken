@@ -2,11 +2,14 @@
 
 This repository contains the **Aiken smart contract implementation** for research on blockchain-based choreography enactment with penalty mechanisms. The project explores how contractual obligations can be transformed into enforceable smart contracts using BPMN (Business Process Model and Notation) workflows.
 
->*This implementation is part of ongoing research into blockchain-aided business process automation and smart contract choreographies.*
-> The model is not finished for real product use, there are still some safety methods to be implemented to ensure money never locked forever in the contract.
+> _This implementation is part of ongoing research into blockchain-aided business process automation and smart contract choreographies._
+> TODO The model is not finished for real product use, there are still some safety methods to be implemented to ensure money never locked forever in the contract.
+> TODO Should also ensure the seller is the one paying the fees
+
 ## Research Overview
 
 This implementation demonstrates a novel approach to:
+
 - **Choreography Enactment**: Automated execution of multi-party business processes through smart contracts
 - **Penalty Enforcement**: Blockchain-based mechanisms for enforcing contractual penalties and compensations
 - **BPMN Integration**: Translation of business process models into executable smart contract logic
@@ -17,16 +20,19 @@ This implementation demonstrates a novel approach to:
 The core validator [`validatorv2.ak`](validators/validatorv2.ak) implements a state machine that manages:
 
 ### State Types
+
 - **`InitState`**: Initial contract state with buyer, seller, workflow definition, and payment amount
 - **`ActiveState`**: Active workflow state tracking current task, artifact CIDs, and progress
 
 ### Actions (Redeemers)
+
 - **`Task`**: Progress to the next task in the choreography workflow
 - **`Compensated`**: End workflow with penalty compensation to the seller
 - **`Uncompensated`**: End workflow with full payment to the seller
 
 ### Key Features
-- **Workflow Validation**: Ensures proper BPMN task transitions using [`NodeState`](lib/constant/typev2.ak) 
+
+- **Workflow Validation**: Ensures proper BPMN task transitions using [`NodeState`](lib/constant/typev2.ak)
 - **Multi-Signature Requirements**: Both buyer and seller must sign all transactions
 - **IPFS Integration**: Artifacts are stored off-chain with validated IPFS CIDs
 - **Penalty Mechanisms**: Automated compensation based on workflow outcomes
@@ -62,21 +68,25 @@ aiken build
 The project includes comprehensive test suites demonstrating various choreography scenarios:
 
 **Positive Tests** ([`testval.ak`](validators/testval.ak)):
+
 - Task progression through BPMN workflows
 - Contract finalization scenarios
 - Cancellation with proper compensations
 
 **Negative Tests** ([`testfail.ak`](validators/testfail.ak)):
+
 - Missing signatures validation
 - Invalid workflow transitions
 - Improper compensation amounts
 
 Run all tests:
+
 ```sh
 aiken check
 ```
 
 Run specific test patterns:
+
 ```sh
 aiken check -m enact_bpmn
 ```
@@ -86,6 +96,7 @@ aiken check -m enact_bpmn
 ### Documentation
 
 Generate HTML documentation:
+
 ```sh
 aiken docs
 ```
@@ -93,6 +104,7 @@ aiken docs
 ## Research Context
 
 This implementation supports research into:
+
 - **Smart Contract Choreographies**: How blockchain technology can automate complex multi-party business processes
 - **Penalty Enforcement Mechanisms**: Cryptographically secure methods for enforcing contractual penalties
 - **Business Process Automation**: Translation of traditional business processes into decentralized autonomous systems
@@ -101,6 +113,7 @@ This implementation supports research into:
 ## Key Validation Logic
 
 The contract enforces several critical properties:
+
 1. **Signature Requirements**: All state transitions require signatures from both buyer and seller
 2. **Workflow Integrity**: Task progressions must follow valid BPMN transitions
 3. **Artifact Validation**: All referenced artifacts must have valid IPFS content identifiers
@@ -108,6 +121,3 @@ The contract enforces several critical properties:
 5. **State Consistency**: Contract state remains consistent across all transitions
 
 ---
-
-
-
