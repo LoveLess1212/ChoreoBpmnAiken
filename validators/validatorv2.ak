@@ -147,6 +147,43 @@ validator enact_bpmn {
         }
       }
     }
+    // need to review this part
+    // InitRefund -> {
+    //   expect ([input], []) =
+    //     (inputs_at(inputs, own_address), outputs_at(outputs, own_address))
+    //   expect InlineDatum(raw_input_datum) = input.output.datum
+    //   expect old_datum: BpmnEnactDatum = raw_input_datum
+    //   when old_datum is {
+    //     InitState { proceed, .. } -> {
+    //       // Find the original funding input in this transaction
+    //       expect Some(funding_input) =
+    //         list.find(
+    //           inputs,
+    //           fn(input) { input.output.address != own_address },
+    //         )
+
+    //       // Get the funder's address from the input
+    //       let funder_credential =
+    //         funding_input.output.address.payment_credential
+
+    //       // Ensure refund goes back to the original funder's address
+    //       expect Some(payment) =
+    //         list.find(
+    //           outputs,
+    //           fn(output) {
+    //             output.address.payment_credential == funder_credential
+    //           },
+    //         )
+
+    //       let is_proceed_refunded =
+    //         assets.lovelace_of(payment.value) == proceed
+
+    //       // No need to check signatures since the funder must sign to spend their UTxO
+    //       is_proceed_refunded
+    //     }
+    //     _ -> False
+    //   }
+    // }
     // True
   }
 

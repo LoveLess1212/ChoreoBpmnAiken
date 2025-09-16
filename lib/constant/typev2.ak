@@ -40,3 +40,6 @@ pub type EnactActions {
   /// Uncompensated the workflow -> compensated ending
   Uncompensated
 }
+/// could implement a refund for the init state accidentally locked funds without the consent of both parties
+/// Redeemer: InitRefund
+/// then check 

@@ -2,6 +2,8 @@
 
 This repository contains the **Aiken smart contract implementation** for research on blockchain-based choreography enactment with penalty mechanisms. The project explores how contractual obligations can be transformed into enforceable smart contracts using BPMN (Business Process Model and Notation) workflows.
 
+>*This implementation is part of ongoing research into blockchain-aided business process automation and smart contract choreographies.*
+> The model is not finished for real product use, there are still some safety methods to be implemented to ensure money never locked forever in the contract.
 ## Research Overview
 
 This implementation demonstrates a novel approach to:
@@ -107,4 +109,5 @@ The contract enforces several critical properties:
 
 ---
 
-*This implementation is part of ongoing research into blockchain-aided business process automation and smart contract choreographies.*
+
+
