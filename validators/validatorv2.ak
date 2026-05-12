@@ -4,8 +4,8 @@ use cardano/address.{VerificationKey}
 use cardano/assets
 use cardano/transaction.{InlineDatum, OutputReference, Transaction, find_input}
 use constant/typev2.{
-  ActiveState, BpmnEnactDatum, Compensated, EnactActions, InitState, NodeState,
-  Task, Uncompensated,
+  ActiveState, BpmnEnactDatum, Compensated, EnactActions, InitRefund, InitState,
+  NodeState, Task, Uncompensated,
 }
 use helper/helper.{is_next_task_valid, is_valid_ipfs_cid}
 use vodka_extra_signatories.{all_key_signed}
@@ -38,8 +38,8 @@ validator enact_bpmn {
         // Handle both InitState and ActiveStatecases
         let (buyer, seller, old_workflow, hashBpmn, old_artifactCid, proceed) =
           when old_datum is {
+            // For InitState, there's no artifactCid, so we use empty ByteArray or handle differently
             InitState { buyer, seller, workflow, hashBpmn, proceed } ->
-              // For InitState, there's no artifactCid, so we use empty ByteArray or handle differently
               (buyer, seller, workflow, hashBpmn, "", proceed)
             ActiveState {
               buyer,
@@ -72,8 +72,9 @@ validator enact_bpmn {
 
         // validate 
         let is_new_task_valid = is_next_task_valid(old_workflow, new_workflow)
+        // TODO: should update here, so that only the active seller needs to sign, not all the sellers in the list
         let is_both_parties_signed =
-          all_key_signed(extra_signatories, [buyer, seller])
+          all_key_signed(extra_signatories, [buyer, ..seller])
         // Only validate old_artifactCid if it's not empty (InitState case)
         let is_old_artifact_valid =
           if old_artifactCid == "" {
@@ -109,7 +110,7 @@ validator enact_bpmn {
               (buyer, seller, proceed)
           }
         let is_both_parties_signed =
-          all_key_signed(extra_signatories, [buyer, seller])
+          all_key_signed(extra_signatories, [buyer, ..seller])
         expect Some(payment_to_seller) =
           list.find(
             self.outputs,
@@ -130,7 +131,7 @@ validator enact_bpmn {
         expect old_datum: BpmnEnactDatum = raw_input_datum
         expect ActiveState { buyer, seller, workflow, proceed, .. } = old_datum
         let is_both_parties_signed =
-          all_key_signed(extra_signatories, [buyer, seller])
+          all_key_signed(extra_signatories, [buyer, ..seller])
         expect Some(payment) =
           // payment to seller
           list.find(

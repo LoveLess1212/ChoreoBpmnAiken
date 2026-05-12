@@ -5,7 +5,7 @@ pub type BpmnEnactDatum {
   /// Initial state of the contract start event
   InitState {
     buyer: ByteArray,
-    seller: ByteArray,
+    seller: List<ByteArray>,
     workflow: NodeState,
     hashBpmn: DataHash,
     proceed: Int,
@@ -13,7 +13,7 @@ pub type BpmnEnactDatum {
   /// Active state of the contract task events
   ActiveState {
     buyer: ByteArray,
-    seller: ByteArray,
+    seller: List<ByteArray>,
     workflow: NodeState,
     artifactCid: ByteArray,
     hashBpmn: DataHash,
@@ -39,6 +39,8 @@ pub type EnactActions {
   Compensated
   /// Uncompensated the workflow -> compensated ending
   Uncompensated
+  /// Refund the initial state in case of locked funds for InitState due to falsy crafted Datum
+  InitRefund
 }
 /// could implement a refund for the init state accidentally locked funds without the consent of both parties
 /// Redeemer: InitRefund

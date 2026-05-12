@@ -67,7 +67,7 @@ pub fn get_nth_workflow(n: Int, end: Bool) -> NodeState {
 pub fn get_datumIn_Start() -> BpmnEnactDatum {
   let a =
     InitState {
-      seller: #"beef",
+      seller: [#"beef"],
       buyer: #"face",
       workflow: get_nth_workflow(0, False),
       hashBpmn: mock_key_hash(0),
@@ -79,7 +79,7 @@ pub fn get_datumIn_Start() -> BpmnEnactDatum {
 pub fn get_datumout_Start() -> BpmnEnactDatum {
   let a =
     ActiveState {
-      seller: #"beef",
+      seller: [#"beef"],
       buyer: #"face",
       workflow: get_nth_workflow(1, False),
       artifactCid: generate_artifact_cid(0),
@@ -95,7 +95,7 @@ pub fn get_datumOutRun1() -> BpmnEnactDatum {
   let a =
     ActiveState {
       buyer: #"face",
-      seller: #"beef",
+      seller: [#"beef"],
       workflow: get_nth_workflow(2, False),
       artifactCid: generate_artifact_cid(1),
       hashBpmn: mock_key_hash(0),
@@ -108,7 +108,7 @@ pub fn get_datumOutRun2() -> BpmnEnactDatum {
   let a =
     ActiveState {
       buyer: #"face",
-      seller: #"beef",
+      seller: [#"beef"],
       workflow: get_nth_workflow(3, True),
       artifactCid: generate_artifact_cid(2),
       hashBpmn: mock_key_hash(0),
