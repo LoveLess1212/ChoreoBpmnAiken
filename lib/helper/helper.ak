@@ -1,9 +1,10 @@
 use aiken/builtin.{length_of_bytearray}
 use aiken/collection/list
 use cardano/address.{Address, VerificationKey}
-use cardano/assets.{Value, merge, zero}
+use cardano/assets.{Value, lovelace_of, merge, zero}
 use cardano/transaction.{Output}
 use constant/typev2.{NodeState}
+use constant/value.{proceed_fee}
 
 pub fn get_all_value_to(outputs: List<Output>, address: ByteArray) -> Value {
   list.foldr(
@@ -32,6 +33,20 @@ pub fn is_valid_ipfs_cid(cid: ByteArray) -> Bool {
   // Not empty
 }
 
+pub fn is_valid_proceed_transition(
+  input_proceed: Int,
+  output_proceed: Int,
+  input_value: Value,
+  output_value: Value,
+) -> Bool {
+  and {
+    input_proceed == proceed_fee,
+    output_proceed == proceed_fee,
+    lovelace_of(input_value) == proceed_fee,
+    lovelace_of(output_value) == proceed_fee,
+  }
+}
+
 pub fn is_next_task_valid(old_task: NodeState, new_task: NodeState) -> Bool {
   let old_current = old_task.current
   expect Some(old_outgoing) = old_task.outgoing
@@ -50,4 +65,14 @@ pub fn is_next_task_valid(old_task: NodeState, new_task: NodeState) -> Bool {
     }
 
   is_valid
+}
+
+pub fn any_payment_to(
+  outputs: List<Output>,
+  address: ByteArray,
+) -> Option<Output> {
+  list.find(
+    outputs,
+    fn(output) { output.address.payment_credential == VerificationKey(address) },
+  )
 }

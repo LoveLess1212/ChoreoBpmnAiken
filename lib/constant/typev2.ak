@@ -5,7 +5,8 @@ pub type BpmnEnactDatum {
   /// Initial state of the contract start event
   InitState {
     buyer: ByteArray,
-    seller: List<ByteArray>,
+    seller: ByteArray,
+    thirdParty: List<ByteArray>,
     workflow: NodeState,
     hashBpmn: DataHash,
     proceed: Int,
@@ -13,7 +14,8 @@ pub type BpmnEnactDatum {
   /// Active state of the contract task events
   ActiveState {
     buyer: ByteArray,
-    seller: List<ByteArray>,
+    seller: ByteArray,
+    thirdParty: List<ByteArray>,
     workflow: NodeState,
     artifactCid: ByteArray,
     hashBpmn: DataHash,
@@ -33,6 +35,7 @@ pub type NodeState {
 
 /// Redeemer type for actions that can be performed on the BPMN enactment smart contract
 pub type EnactActions {
+  Start
   /// Move to the next task in the workflow
   Task
   /// Compensated the workflow -> uncompensated ending
@@ -41,6 +44,7 @@ pub type EnactActions {
   Uncompensated
   /// Refund the initial state in case of locked funds for InitState due to falsy crafted Datum
   InitRefund
+  Enrich
 }
 /// could implement a refund for the init state accidentally locked funds without the consent of both parties
 /// Redeemer: InitRefund

@@ -5,7 +5,6 @@ This repository contains the **Aiken smart contract implementation** for researc
 > _This implementation is part of ongoing research into blockchain-aided business process automation and smart contract choreographies._
 > TODO The model is not finished for real product use, there are still some safety methods to be implemented to ensure money never locked forever in the contract.
 > TODO Should also ensure the seller is the one paying the fees
-> TODO value of the input.output on the first task should be equal to proceed
 
 ## Research Overview
 

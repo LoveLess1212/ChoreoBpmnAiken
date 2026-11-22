@@ -1,13 +1,17 @@
+use aiken/collection/dict
 use aiken/collection/list
 // use aiken/crypto.{Blake2b_224, DataHash}
-use cardano/address.{VerificationKey}
-use cardano/assets
+use cardano/assets.{PolicyId, policies}
 use cardano/transaction.{InlineDatum, OutputReference, Transaction, find_input}
 use constant/typev2.{
   ActiveState, BpmnEnactDatum, Compensated, EnactActions, InitRefund, InitState,
-  NodeState, Task, Uncompensated,
+  NodeState, Start, Task, Uncompensated,
 }
-use helper/helper.{is_next_task_valid, is_valid_ipfs_cid}
+use constant/value.{proceed_fee}
+use helper/helper.{
+  any_payment_to, is_next_task_valid, is_valid_ipfs_cid,
+  is_valid_proceed_transition,
+}
 use vodka_extra_signatories.{all_key_signed}
 use vodka_inputs.{inputs_at}
 use vodka_outputs.{outputs_at}
@@ -36,19 +40,37 @@ validator enact_bpmn {
         expect InlineDatum(raw_input_datum) = input.output.datum
         expect old_datum: BpmnEnactDatum = raw_input_datum
         // Handle both InitState and ActiveStatecases
-        let (buyer, seller, old_workflow, hashBpmn, old_artifactCid, proceed) =
+        let (
+          buyer,
+          seller,
+          thirdParty,
+          old_workflow,
+          hashBpmn,
+          old_artifactCid,
+          proceed,
+        ) =
           when old_datum is {
             // For InitState, there's no artifactCid, so we use empty ByteArray or handle differently
-            InitState { buyer, seller, workflow, hashBpmn, proceed } ->
-              (buyer, seller, workflow, hashBpmn, "", proceed)
+            InitState { buyer, seller, thirdParty, workflow, hashBpmn, proceed } ->
+              (buyer, seller, thirdParty, workflow, hashBpmn, "", proceed)
             ActiveState {
               buyer,
               seller,
+              thirdParty,
               workflow,
               hashBpmn,
               artifactCid,
               proceed,
-            } -> (buyer, seller, workflow, hashBpmn, artifactCid, proceed)
+            } ->
+              (
+                buyer,
+                seller,
+                thirdParty,
+                workflow,
+                hashBpmn,
+                artifactCid,
+                proceed,
+              )
           }
         // extract datum output
         expect InlineDatum(raw_output_datum) = output.datum
@@ -56,6 +78,7 @@ validator enact_bpmn {
         expect ActiveState {
           workflow: new_workflow,
           artifactCid: new_artifactCid,
+          proceed: new_proceed,
           ..
         } = new_datum
 
@@ -64,6 +87,7 @@ validator enact_bpmn {
           ActiveState {
             buyer,
             seller,
+            thirdParty,
             workflow: new_workflow,
             hashBpmn,
             artifactCid: new_artifactCid,
@@ -72,9 +96,15 @@ validator enact_bpmn {
 
         // validate 
         let is_new_task_valid = is_next_task_valid(old_workflow, new_workflow)
-        // TODO: should update here, so that only the active seller needs to sign, not all the sellers in the list
+        let is_proceed_valid =
+          is_valid_proceed_transition(
+            proceed,
+            new_proceed,
+            input.output.value,
+            output.value,
+          )
         let is_both_parties_signed =
-          all_key_signed(extra_signatories, [buyer, ..seller])
+          all_key_signed(extra_signatories, [buyer, seller])
         // Only validate old_artifactCid if it's not empty (InitState case)
         let is_old_artifact_valid =
           if old_artifactCid == "" {
@@ -89,12 +119,12 @@ validator enact_bpmn {
         and {
           new_datum == expected_output_datum,
           is_new_task_valid,
+          is_proceed_valid,
           is_both_parties_signed,
           is_valid_ipfs_cid(new_artifactCid),
           is_old_artifact_valid,
         }
       }
-
       Compensated -> {
         // could compensated at any time, no output generated, but both parties must sign, and seller must be refunded
         // could be update the logic in the future to specify which parties should sign
@@ -110,16 +140,14 @@ validator enact_bpmn {
               (buyer, seller, proceed)
           }
         let is_both_parties_signed =
-          all_key_signed(extra_signatories, [buyer, ..seller])
-        expect Some(payment_to_seller) =
-          list.find(
-            self.outputs,
-            fn(output) {
-              output.address.payment_credential == VerificationKey(seller)
-            },
-          )
-        let is_seller_refunded =
-          assets.lovelace_of(payment_to_seller.value) == proceed
+          all_key_signed(extra_signatories, [buyer, seller])
+        expect Some(payment_to_seller) = any_payment_to(self.outputs, seller)
+
+        let is_seller_refunded = and {
+            proceed == proceed_fee,
+            assets.lovelace_of(input.output.value) == proceed_fee,
+            assets.lovelace_of(payment_to_seller.value) == proceed_fee,
+          }
 
         is_both_parties_signed && is_seller_refunded
       }
@@ -131,16 +159,14 @@ validator enact_bpmn {
         expect old_datum: BpmnEnactDatum = raw_input_datum
         expect ActiveState { buyer, seller, workflow, proceed, .. } = old_datum
         let is_both_parties_signed =
-          all_key_signed(extra_signatories, [buyer, ..seller])
-        expect Some(payment) =
-          // payment to seller
-          list.find(
-            self.outputs,
-            fn(output) {
-              output.address.payment_credential == VerificationKey(seller)
-            },
-          )
-        let is_proceed_paid = assets.lovelace_of(payment.value) == proceed
+          all_key_signed(extra_signatories, [buyer, seller])
+        expect Some(payment) = any_payment_to(self.outputs, seller)
+
+        let is_proceed_paid = and {
+            proceed == proceed_fee,
+            assets.lovelace_of(input.output.value) == proceed_fee,
+            assets.lovelace_of(payment.value) == proceed_fee,
+          }
         and {
           is_both_parties_signed,
           is_proceed_paid,
@@ -153,8 +179,9 @@ validator enact_bpmn {
         expect InlineDatum(raw_input_datum) = input.output.datum
         expect old_datum: BpmnEnactDatum = raw_input_datum
         when old_datum is {
-          InitState { proceed, .. } -> {
+          InitState { .. } -> {
             // Find the original funding input in this transaction
+            // this is only the claimer,
             expect Some(funding_input) =
               list.find(
                 inputs,
@@ -175,7 +202,9 @@ validator enact_bpmn {
               )
 
             let is_proceed_refunded =
-              assets.lovelace_of(payment.value) == proceed
+              assets.lovelace_of(payment.value) == assets.lovelace_of(
+                input.output.value,
+              )
 
             // No need to check signatures since the funder must sign to spend their UTxO
             is_proceed_refunded
@@ -183,6 +212,24 @@ validator enact_bpmn {
           _ -> False
         }
       }
+      _ -> False
+    }
+  }
+
+  mint(redeemer: EnactActions, policy_id: PolicyId, self: Transaction) {
+    // the utxo that is being spent
+    when redeemer is {
+      Start -> {
+        let Transaction { inputs, outputs, mint, .. } = self
+        expect Some(state_output) =
+          list.find(
+            outputs,
+            fn(output) { list.has(policies(output.value), policy_id) },
+          )
+        True
+      }
+
+      _ -> False
     }
   }
 
