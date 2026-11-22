@@ -2,25 +2,13 @@ use aiken/crypto.{DataHash}
 
 /// Datum type for the BPMN enactment smart contract
 pub type BpmnEnactDatum {
-  /// Initial state of the contract start event
-  InitState {
-    buyer: ByteArray,
-    seller: ByteArray,
-    thirdParty: List<ByteArray>,
-    workflow: NodeState,
-    hashBpmn: DataHash,
-    proceed: Int,
-  }
-  /// Active state of the contract task events
-  ActiveState {
-    buyer: ByteArray,
-    seller: ByteArray,
-    thirdParty: List<ByteArray>,
-    workflow: NodeState,
-    artifactCid: ByteArray,
-    hashBpmn: DataHash,
-    proceed: Int,
-  }
+  buyer: ByteArray,
+  seller: ByteArray,
+  thirdParty: List<ByteArray>,
+  workflow: NodeState,
+  artifactCid: Option<ByteArray>,
+  hashBpmn: DataHash,
+  proceed: Int,
 }
 
 /// Current state of a task in the BPMN workflow

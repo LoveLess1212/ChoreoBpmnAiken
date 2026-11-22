@@ -2,7 +2,7 @@ use aiken/builtin.{length_of_bytearray}
 use aiken/collection/list
 use cardano/address.{Address, VerificationKey}
 use cardano/assets.{Value, lovelace_of, merge, zero}
-use cardano/transaction.{Output}
+use cardano/transaction.{Input, Output}
 use constant/typev2.{NodeState}
 use constant/value.{proceed_fee}
 
@@ -20,16 +20,16 @@ pub fn get_all_value_to(outputs: List<Output>, address: ByteArray) -> Value {
   )
 }
 
-pub fn is_valid_ipfs_cid(cid: ByteArray) -> Bool {
+pub fn is_valid_ipfs_cid(cid: Option<ByteArray>) -> Bool {
   // Basic checks you might want:
+  expect Some(cid) = cid
   let length = length_of_bytearray(cid)
   and {
     length >= 32,
     // Minimum reasonable length
     length <= 64,
-    // Maximum reasonable length
-    cid != #"",
   }
+  // Maximum reasonable length
   // Not empty
 }
 
@@ -74,5 +74,14 @@ pub fn any_payment_to(
   list.find(
     outputs,
     fn(output) { output.address.payment_credential == VerificationKey(address) },
+  )
+}
+
+pub fn any_input_from(inputs: List<Input>, address: ByteArray) -> Bool {
+  list.any(
+    inputs,
+    fn(input) {
+      input.output.address.payment_credential == VerificationKey(address)
+    },
   )
 }
